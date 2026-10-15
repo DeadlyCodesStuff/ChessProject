@@ -3,10 +3,6 @@ from pathlib import Path
 
 pygame.init()
 
-# todo
-# king checks
-# legal move funneling
-
 #board start
 board = [
     ["rook1","knight1","bishop1","queen1","king1","bishop1","knight1","rook1"],
@@ -18,6 +14,11 @@ board = [
     ["pawn","pawn","pawn","pawn","pawn","pawn","pawn","pawn"],
     ["rook","knight","bishop","queen","king","bishop","knight","rook"],
 ]
+
+
+
+
+
 knight_offsets = [(-2,-1), (-2,1), (-1,-2), (-1,2), (1,-2), (1,2), (2,-1), (2,1)]   
 rook_offsets = [(1,0), (-1,0), (0,1), (0,-1)]
 Bishop_offsets = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
@@ -30,6 +31,11 @@ queen_offsets = [
 
 
 
+DEBUG = False
+
+def debug(*args, **kwargs):
+    if DEBUG:
+        print(*args, **kwargs)
 
 screen = pygame.display.set_mode((1100, 900))
 pygame.display.set_caption('bot makes chess')
@@ -79,10 +85,51 @@ square1.fill(pygame.Color('#d28b48'))
 square2 = pygame.Surface((75,75))
 square2.fill(pygame.Color('#ffcd9f'))
 
+#font and text
+font = pygame.font.SysFont("Arial", 36)
+text_surface = font.render("Press R to restart", True, (255, 255, 255))
 
 x = 90
 y = 100
 board_coordinates = []
+
+def KingPOS(turn):
+    row_counter = 0
+    col_counter = 0
+
+    for row in board:
+        for col in row:
+            if col != "":
+                if turn == "B" and col == "king1":
+                    return (row_counter, col_counter)
+                elif turn == "W" and col == "king":
+                    return (row_counter, col_counter)
+
+            col_counter += 1
+        row_counter += 1
+        col_counter = 0
+
+    return None
+
+def LeavesKingInCheck(turn, start, end):
+    r, c = start
+    nr, nc = end
+
+    piece = board[r][c]
+    captured = board[nr][nc]
+
+    board[nr][nc] = piece
+    board[r][c] = ""
+
+    x,y = KingPOS(turn)
+    in_check = checkdetection(x, y, None)
+
+    board[r][c] = piece
+    board[nr][nc] = captured
+
+    return in_check
+
+
 
 def get_cell(row, col):
     if row < 0 or col < 0 or row >= 8 or col >= 8:
@@ -107,56 +154,76 @@ def is_enemy(color,cell):
 
 def PawnLegalMoves(MoveMarkers,row,col):
     starting_rows = [6,1]
-    piece = board[row][col]
+    piece = get_cell(row,col)
     r,c = row,col
+    King_Position = KingPOS(turn)
     # print("checking moves")
-    if "1" in piece:
-        if get_cell(r+1,c+1) != "" and "1" not in get_cell(r+1,c+1):
-            MoveMarkers.append((r+1,c+1))
-        if get_cell(r+1,c-1) != "" and "1" not in get_cell(r+1,c+1):
-            MoveMarkers.append((r+1,c-1))
-        # print("black pawn")
-        if row == starting_rows[1]:
-            # print("starting row")
-            if get_cell(r+1,c) == "":
-                # print("first square empty")
-                if get_cell(r+2,c)=="":
-                #    print('second square empty')
-                   MoveMarkers += [(r+2, c), (r+1, c)]   
-                MoveMarkers.append((r+1,c))
-        elif get_cell(r+1,c)=="":
-            MoveMarkers.append((r+1,c))
-    else:
-        if get_cell(r-1,c+1) != "" and "1" in get_cell(r-1,c+1):
-            MoveMarkers.append((r-1,c+1))
-        if get_cell(r-1,c-1) != "" and "1" in get_cell(r-1,c-1):
-            MoveMarkers.append((r-1,c-1))
-        if row == starting_rows[0]: #print("starting row")
-            if get_cell(r-1,c) == "": #print("first square empty")
-                if get_cell(r-2,c)=="": #print("second square empty")
-                    MoveMarkers += [(r-2, c), (r-1, c)]   
-                MoveMarkers.append((r-1,c))
-        elif get_cell(r-1,c)=="":
-            MoveMarkers.append((r-1,c))
-    return MoveMarkers
-            
+    if piece is not None:
+        if "1" in piece:  # Black pawn
+            # Diagonal captures
+            target = get_cell(r + 1, c + 1)
+            if target is not None and target != "" and "1" not in target:
+                if not LeavesKingInCheck(turn,(row,col),(r+1,c+1)):
+                    MoveMarkers.append((r + 1, c + 1))
 
+            target = get_cell(r + 1, c - 1)
+            if target is not None and target != "" and "1" not in target:
+                if not LeavesKingInCheck(turn,(row,col),(r+1,c-1)):
+                    MoveMarkers.append((r + 1, c - 1))
+
+            # Forward movement
+            if row == starting_rows[1]:
+                if get_cell(r + 1, c) == "":
+                    if get_cell(r + 2, c) == "":
+                        if not LeavesKingInCheck(turn,(row,col),(r+2,c)):
+                            MoveMarkers.append((r + 2, c))
+                    if not LeavesKingInCheck(turn,(row,col),(r+1,c)):
+                        MoveMarkers.append((r + 1, c))
+            elif get_cell(r + 1, c) == "":
+                if not LeavesKingInCheck(turn,(row,col),(r+1,c)):
+                    MoveMarkers.append((r + 1, c))
+
+        else:  # White pawn
+            # Diagonal captures
+            target = get_cell(r - 1, c + 1)
+            if target is not None and target != "" and "1" in target:
+                if not LeavesKingInCheck(turn,(row,col),(r-1,c+1)):
+                    MoveMarkers.append((r - 1, c + 1))
+
+            target = get_cell(r - 1, c - 1)
+            if target is not None and target != "" and "1" in target:
+                if not LeavesKingInCheck(turn,(row,col),(r-1,c-1)):
+                    MoveMarkers.append((r - 1, c - 1))
+
+            # Forward movement
+            if row == starting_rows[0]:
+                if get_cell(r - 1, c) == "":
+                    if get_cell(r - 2, c) == "":
+                        if not LeavesKingInCheck(turn,(row,col),(r-2,c)):
+                            MoveMarkers.append((r - 2, c))
+                    if not LeavesKingInCheck(turn,(row,col),(r-1,c)):
+                        MoveMarkers.append((r - 1, c))
+            elif get_cell(r - 1, c) == "":
+                if not LeavesKingInCheck(turn,(row,col),(r-1,c)):
+                    MoveMarkers.append((r - 1, c))
+    return MoveMarkers
 
 
 def KnightLegalMoves(MoveMarkers,row,col,knight_offsets):
     Color = get_color(row,col)
-
 
     for dr, dc in knight_offsets:
         cell = get_cell(row + dr, col + dc)
         if cell is None:
             continue
         if cell == '':
-            MoveMarkers.append((row + dr, col + dc))
+            if not LeavesKingInCheck(turn,(row,col),(row+dr,col+dc)):
+                MoveMarkers.append((row + dr, col + dc))
         elif cell is not None and "king" not in cell:
             is_black_target = "1" in cell
             if (Color == "B" and not is_black_target) or (Color == "W" and is_black_target):
-                MoveMarkers.append((row + dr, col + dc))
+                if not LeavesKingInCheck(turn,(row,col),(row+dr,col+dc)):
+                    MoveMarkers.append((row + dr, col + dc))
     return MoveMarkers   
  
             
@@ -168,7 +235,8 @@ def BishopLegalMoves(MoveMarkers, row, col, bishop_offsets):
         while 0 <= r < 8 and 0 <= c < 8:
             cell = get_cell(r,c)
             if cell == "":
-                MoveMarkers.append((r, c))
+                if not LeavesKingInCheck(turn,(row,col),(r,c)):
+                    MoveMarkers.append((r, c))
             elif cell is not None and "king" not in cell:
                 is_black_target = "1" in cell
                 if (Color == "B" and not is_black_target) or (Color == "W" and is_black_target):
@@ -187,11 +255,13 @@ def QueenLegalMoves(Movemarkers,row,col,Queen_offsets):
         while 0 <= r < 8 and 0 <= c < 8:
             cell = get_cell(r,c)
             if cell == "":
-                Movemarkers.append((r,c))
+                if not LeavesKingInCheck(turn,(row,col),(r,c)):
+                    Movemarkers.append((r,c))
             elif "king" not in cell:
                 is_black_target = "1" in cell
                 if (Color == "B" and not is_black_target) or (Color == "W" and is_black_target):
-                    Movemarkers.append((r, c ))
+                    if not LeavesKingInCheck(turn,(row,col),(r,c)):
+                        Movemarkers.append((r, c ))
                 break
             else:
                 break
@@ -209,7 +279,8 @@ def Rooklegalmoves(Movemarkers,row,col,rook_offsets):
         while 0 <= r <= 8 and 0 <= c <=8:
             cell = get_cell(r,c) 
             if cell == "":
-                Movemarkers.append((r,c))
+                if not LeavesKingInCheck(turn,(row,col),(r,c)):
+                    Movemarkers.append((r,c))
             elif cell is not None and "king" not in cell:
                 is_black_target = "1" in cell
                 if (Color == "B" and not is_black_target) or (Color == "W" and is_black_target):
@@ -233,30 +304,27 @@ def kinglegalmoves(Movemarkers, row, col):
     for dr, dc in kingsquares:
         r, c = row + dr, col + dc
         if not (0 <= r < 8 and 0 <= c < 8):
-            print(f"  ({r},{c}) -> off board, skip")
+            debug(f"  ({r},{c}) -> off board, skip")
             continue
-
         cell = get_cell(r, c)
-
         if cell is None or cell == "":
             in_check = checkdetection(r, c, origin=(row, col))
             if in_check:
-                print(f"  ({r},{c}) -> empty, but king would be in check, skip")
+                debug(f"  ({r},{c}) -> empty, but king would be in check, skip")
             else:
-                print(f"  ({r},{c}) -> empty, safe, MARK")
+                debug(f"  ({r},{c}) -> empty, safe, MARK")
                 Movemarkers.append((r, c))
-
         else:
             is_black_target = "1" in cell
             is_enemy_target = (Color == "B" and not is_black_target) or (Color == "W" and is_black_target)
             if not is_enemy_target:
-                print(f"  ({r},{c}) -> own piece ({cell}), skip")
+                debug(f"  ({r},{c}) -> own piece ({cell}), skip")
             else:
                 in_check = checkdetection(r, c, origin=(row, col))
                 if in_check:
-                    print(f"  ({r},{c}) -> enemy piece ({cell}), but capture would leave king in check, soo skip")
+                    debug(f"  ({r},{c}) -> enemy piece ({cell}), but capture would leave king in check, soo skip")
                 else:
-                    print(f"  ({r},{c}) -> enemy piece ({cell}), safe capture, marking square")
+                    debug(f"  ({r},{c}) -> enemy piece ({cell}), safe capture, marking square")
                     Movemarkers.append((r, c))
 
     return Movemarkers   
@@ -296,7 +364,7 @@ def checkdetection(king_row, king_col, origin=None):
                 continue
             cell = get_cell(r, c)
             if cell is not None and cell != "":
-                print(f"Found piece {cell} at ({r},{c}), enemy={is_enemy(Color, cell)}")
+                debug(f"Found piece {cell} at ({r},{c}), enemy={is_enemy(Color, cell)}")
                 if is_enemy(Color, cell):
                     if (dr == 0 or dc == 0) and ("rook" in cell or "queen" in cell):
                         return True
@@ -334,7 +402,7 @@ def checkdetection(king_row, king_col, origin=None):
         if cell and is_enemy(Color, cell) and "pawn" in cell:
             return True
         
-    print(f"Checking ({king_row},{king_col}), Color={Color}")
+    # print(f"Checking ({king_row},{king_col}), Color={Color}")
     return False
 
 
@@ -355,8 +423,30 @@ def place_pieces(board_coordinates, PIECES_DIR, board):
                 screen.blit(piece, ((piece_pos[0] + 37) - (piece.get_width()/2) , (piece_pos[1] + 37) - (piece.get_height()/2)))
     return piece_rect_list
 
-def Legal_moves(board,row,col):
+
+def restart_game():
+    global board, turn, state, SelectedPiece, LegalMoves, marker_rects
+
+    board = [
+        ["rook1", "knight1", "bishop1", "queen1", "king1", "bishop1", "knight1", "rook1"],
+        ["pawn1"] * 8,
+        [""] * 8,
+        [""] * 8,
+        [""] * 8,
+        [""] * 8,
+        ["pawn"] * 8,
+        ["rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook"]
+    ]
+
+    turn = "W"
+    state = "neutral"
+    SelectedPiece = None
+    LegalMoves = []
+    marker_rects = []
+
+def Legal_moves(row,col):
     MoveMarkers = []
+
     if board[row][col]:
         Selectedpiece = board[row][col]
         #pawns
@@ -376,9 +466,9 @@ def Legal_moves(board,row,col):
             return kinglegalmoves(MoveMarkers,row,col)
     
         if Selectedpiece == "queen" or Selectedpiece == "queen1":
-            print("queen")
             return QueenLegalMoves(MoveMarkers,row,col,queen_offsets)
-
+    else:
+        return MoveMarkers
 
 def generateBoard(x,y,board_coordinates):
     board_coordinates = []
@@ -397,12 +487,50 @@ def generateBoard(x,y,board_coordinates):
         x=90
     return board_coordinates
 
+def WinCheck(turn):
+    # print(f'turn {turn}')
+    moves = 0
+    row_counter = 0
+    state = "neutral"
+
+    for row in board:
+        debug(row)
+        col_counter = 0
+
+        for i in row:
+            if i != "":
+                if turn == "W":
+                    if "1" not in i:
+                        if "king" in i:
+                            king_pos = (row_counter,col_counter)
+
+                        legal = Legal_moves(row_counter, col_counter)
+                        moves += len(legal)
+                        debug(f"found {len(legal)} for {i}")
+                else:
+                    if "1" in i:
+                        if "king" in i:
+                            king_pos = (row_counter,col_counter)
+                        legal = Legal_moves(row_counter, col_counter)
+                        moves += len(legal)
+                        debug(f"found {len(legal)} for {i}")
+
+            col_counter += 1
+        row_counter += 1
+    if moves == 0:
+       if checkdetection(king_pos[0],king_pos[1],None): state = "checkmate"
+       else: state = "stalemate"
+    return state
+
+
 
 board_coordinates = generateBoard(x,y,board_coordinates)
 LegalMoves = []
 marker_rects = []
 SelectedPiece = ()
 turn = "W"
+state = WinCheck(turn)
+
 
 
 while True:
@@ -412,32 +540,42 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
+        if event.type == pygame.KEYDOWN:
+            if state in ("checkmate", "stalemate") and event.key == pygame.K_r:
+                restart_game()
         if event.type == pygame.MOUSEBUTTONDOWN:
-            col = (event.pos[0] - x)//75
-            row = (event.pos[1] - y)//75
-           
-            if "1" in board[row][col]:
-                color = "B"
-            else:
-                color = "W"
-            hit = False
-            for idx,marker in enumerate(marker_rects):
-                if marker.collidepoint(event.pos):
-                    print(f"you clicked marker {idx}")
-                    hit = True
-                    MakeMove(SelectedPiece,col,row,LegalMoves)
-                    LegalMoves = []
-                    if turn == "W": turn = "B"
-                    else: turn = "W"
-                    break
-            if not hit:
-                for piece_rect in piece_rect_list:
-                    if piece_rect.collidepoint(event.pos):
-                        if turn == color:
-                            # print(f"click: {event.pos} → grid: ({row}, {col})")
-                            LegalMoves = Legal_moves(board,row,col)
-                            # print(f"Knight at ({row},{col}) → moves: {LegalMoves}")   
-                            SelectedPiece = (row,col)
+            if state == "neutral":
+                col = (event.pos[0] - x)//75
+                row = (event.pos[1] - y)//75
+                if 0 <= row < 8 and 0 <= col < 8:
+                    piece = get_cell(row,col)
+                    if piece != None:
+                        if "1" in piece:
+                            color = "B"
+                        else:
+                            color = "W"
+                        hit = False
+                        for idx,marker in enumerate(marker_rects):
+                            if marker.collidepoint(event.pos):
+                                debug(f"you clicked marker {idx}")
+                                hit = True
+                                MakeMove(SelectedPiece,col,row,LegalMoves)
+                                LegalMoves = []
+                                if turn == "W": turn = "B"
+                                else: turn = "W"
+                                state = WinCheck(turn)
+                                debug(state)
+                                break
+                        if not hit:
+                            for piece_rect in piece_rect_list:
+                                if piece_rect.collidepoint(event.pos):
+                                    if turn == color:
+                                        debug(f"click: {event.pos} → grid: ({row}, {col})")
+                                        LegalMoves = Legal_moves(row,col)
+                                        debug(f"Knight at ({row},{col}) → moves: {LegalMoves}")   
+                                        SelectedPiece = (row,col)
+                                        break
+                        else:
                             break
 
             
@@ -447,16 +585,18 @@ while True:
     generateBoard(x,y,board_coordinates) 
     piece_rect_list = place_pieces(board_coordinates,PIECES_DIR,board)
 
-
-    marker_rects = []
-    if LegalMoves:
-        #  print(LegalMoves)
-        for r,c in LegalMoves: 
-            pos = board_coordinates[r * 8 + c]
-            center = (pos[0] + 37, pos[1] + 37)
-            marker_rect = MoveMarker.get_rect(center=center)
-            screen.blit(MoveMarker, marker_rect)
-            marker_rects.append(marker_rect)
+    if state == "checkmate" or state == "stalemate":
+        screen.blit(text_surface, (50, 50)) 
+    else:
+        marker_rects = []
+        if LegalMoves:
+            #  print(LegalMoves)
+            for r,c in LegalMoves: 
+                pos = board_coordinates[r * 8 + c]
+                center = (pos[0] + 37, pos[1] + 37)
+                marker_rect = MoveMarker.get_rect(center=center)
+                screen.blit(MoveMarker, marker_rect)
+                marker_rects.append(marker_rect)
 
     # pygame.display.flip()
     pygame.display.update()

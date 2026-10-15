@@ -1,42 +1,47 @@
-# Python Pygame Chess
+ Python Pygame Chess
 
 A small, local two-player chess game built with Python and Pygame.
 
-## Overview
+ Overview
 
-This project is a graphical chess game where two players can face off on the same machine, select pieces, and move them using custom movement logic. When a piece is selected, visual markers show its available destinations, and the game tracks whose turn it is between White and Black.
+This project is a graphical chess game where two players can face off on the same machine. Players can select pieces and move them around using functional chess logic.
 
-## Implemented Features
+When a piece is selected, visual markers highlight its legal moves while accounting for king safety. The game also tracks active turns and detects end-game states.
 
-- Graphical Board: Renders an 8×8 grid with alternating square colors and a custom background.
-- Piece Sprites: Loads individual image files for all standard chess pieces for both sides.
-- Turn Tracking: Switches active control between White and Black after every successful move.
-- Movement Logic: Includes custom movement calculator functions for pawns, knights, bishops, rooks, queens, and kings.
-- Move Markers: Displays visual indicators on destination squares when a piece is selected.
-- Initial Check Detection: Includes preliminary logic for detecting attacks on the king and checking king movement safety.
+ Implemented Features
 
-## Controls and Instructions
+- **Graphical Board:** Renders an \(8 \times 8\) grid with alternating square colors and a custom background.
+- **Piece Sprites:** Loads individual image files for all standard chess pieces for both sides.
+- **Turn Tracking:** Switches active control between White and Black after every successful move.
+- **Movement Logic and Validation:** Calculates moves for pawns, knights, bishops, rooks, queens, and kings, incorporating king safety checks to prevent moves that leave the king in check.
+- **Move Markers:** Displays visual indicators on valid destination squares when a piece is selected.
+- **Checkmate and Stalemate Detection:** Evaluates the board state at the start of each turn to detect checkmate, stalemate, or ongoing play.
+- **Robust Click Handling:** Handles clicks outside the board boundaries without crashing the application.
 
-- Select a Piece: Left-click one of your pieces when it is your turn.
-- View Available Moves: Destination squares are highlighted with move markers.
-- Make a Move: Click a highlighted destination to move the piece and pass the turn to the other player.
+ Controls and Instructions
 
-## Prerequisites
+- **Select a Piece:** Left-click one of your pieces when it is your turn.
+- **View Legal Moves:** Available destination squares are highlighted with move markers.
+- **Make a Move:** Click a highlighted destination square to execute the move and pass the turn.
+- **Restart:** Once checkmate or stalemate occurs, use the designated restart control to reset the board.
+
+ Prerequisites
 
 - Python 3.x
 - Pygame
 
-## Installation and Launch Instructions
+ Installation and Launch
 
-1. Install Python and Pygame.
-2. Clone or download the repository, keeping the `images/` directory structure intact.
-3. Run the game from your terminal:
+1. Ensure Python 3.x and Pygame are installed on your system.
+2. Clone or download the repository.
+3. Ensure the `images/` directory and its contents remain in the correct locations.
+4. Open a terminal in the project directory and run:
 
    ```bash
    python Chess.py
    ```
 
-## Repository Directory Structure
+ Repository Structure
 
 ```text
 ├── Chess.py
@@ -59,21 +64,8 @@ This project is a graphical chess game where two players can face off on the sam
         └── pawn1.png
 ```
 
-## Planned / In Progress
+ Current Limitations and Unfinished Features
 
-- King Safety and Legal Move Validation: Complete the logic that prevents moves from leaving the player's king in check, including handling discovered attacks and pinned pieces.
-- Checkmate and Stalemate Detection: Determine when a game has ended because a player has no legal moves.
-- Complete Check Detection: Improve and test attack detection across different board positions and piece interactions.
-
-## Future Ideas
-
-- Pawn Promotion: Allow pawns reaching the opposite end of the board to promote to another piece.
-- Castling and En Passant: Implement the remaining special chess moves.
-- Move History: Display a record of moves made during the game.
-- Move Timer: Add a chess clock for timed games.
-- Move Undo: Allow players to take back a move, potentially for testing and debugging.
-- Board State Testing: Create specific board positions to test movement rules, king safety, and other edge cases.
-- Chess Notation: Record moves using standard algebraic chess notation.
-- Game Restart: Add a convenient way to start a new game without relaunching the application.
-
+- **Special Moves:** Castling and *en passant* are not yet supported.
+- **Pawn Promotion:** Reaching the final rank with a pawn does not yet trigger a promotion selection menu.
 
