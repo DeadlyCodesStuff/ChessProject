@@ -1,97 +1,156 @@
+
 import pygame
 from pathlib import Path
 
+
 pygame.init()
 
-#board start
+screen = pygame.display.set_mode((1100, 900))
+pygame.display.set_caption("bot makes chess")
+clock = pygame.time.Clock()
+
+
+BASE_DIR = Path(__file__).resolve().parent
+
+IMAGE_DIR = BASE_DIR / "images"
+PIECES_DIR = IMAGE_DIR / "Pieces"
+MOVEMARKER_DIR = IMAGE_DIR / "Movemarkers"
+
+Square_size = 75
+DEBUG = False
+ispromoting = False
+pawn_pos = ()
+
+
 board = [
-    ["rook1","knight1","bishop1","queen1","king1","bishop1","knight1","rook1"],
-    ["pawn1","pawn1","pawn1","pawn1","pawn1","pawn1","pawn1","pawn1"],
-    ["","","","","","","",""],
-    ["","","","","","","",""],
-    ["","","","","","","",""],
-    ["","","","","","","",""],
-    ["pawn","pawn","pawn","pawn","pawn","pawn","pawn","pawn"],
-    ["rook","knight","bishop","queen","king","bishop","knight","rook"],
+    ["rook1", "knight1", "bishop1", "queen1", "king1", "bishop1", "knight1", "rook1"],
+    ["pawn1", "pawn1", "pawn1", "pawn1", "pawn1", "pawn1", "pawn1", "pawn1"],
+    ["", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", ""],
+    ["pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn", "pawn"],
+    ["rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook"],
 ]
 
 
 
+piece_names = [
+    "pawn", "rook", "knight", "bishop", "queen", "king",
+    "pawn1", "rook1", "knight1", "bishop1", "queen1", "king1",
+]
+
+piece_surfaces = {}
+
+for name in piece_names:
+    path = PIECES_DIR / f"{name}.png"
+    piece_surfaces[name] = pygame.image.load(
+        str(path)
+    ).convert_alpha()
+
+piece_images = {
+    name: pygame.transform.scale(
+        image,
+        (int(Square_size * 0.8), int(Square_size * 0.8))
+    )
+    for name, image in piece_surfaces.items()
+}
+
+promotion_images = {
+    name: pygame.transform.scale(
+        piece_surfaces[name],
+        (Square_size * 0.8, Square_size *0.8)
+    )
+    for name in [
+        "queen", "rook", "bishop", "knight",
+        "queen1", "rook1", "bishop1", "knight1"
+    ]
+}
 
 
-knight_offsets = [(-2,-1), (-2,1), (-1,-2), (-1,2), (1,-2), (1,2), (2,-1), (2,1)]   
-rook_offsets = [(1,0), (-1,0), (0,1), (0,-1)]
-Bishop_offsets = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+
+rook1 = piece_surfaces["rook1"]
+BBishop = piece_surfaces["bishop1"]
+BKnight = piece_surfaces["knight1"]
+BQueen = piece_surfaces["queen1"]
+BKing = piece_surfaces["king1"]
+Bpawn = piece_surfaces["pawn1"]
+
+WRook = piece_surfaces["rook"]
+WBishop = piece_surfaces["bishop"]
+WKnight = piece_surfaces["knight"]
+Wqueen = piece_surfaces["queen"]
+WKing = piece_surfaces["king"]
+Wpawn = piece_surfaces["pawn"]
+
+
+
+knight_offsets = [
+    (-2, -1), (-2, 1), (-1, -2), (-1, 2),
+    (1, -2), (1, 2), (2, -1), (2, 1)
+]
+
+rook_offsets = [
+    (1, 0), (-1, 0), (0, 1), (0, -1)
+]
+
+Bishop_offsets = [
+    (1, 1), (1, -1), (-1, 1), (-1, -1)
+]
+
 queen_offsets = [
-    (0, 1), (0, -1),   #bum
-    (1, 0), (-1, 0),   # bum
-    (1, 1), (1, -1),   #bum
-    (-1, 1), (-1, -1)  # bum
-]   
+    (0, 1), (0, -1),
+    (1, 0), (-1, 0),
+    (1, 1), (1, -1),
+    (-1, 1), (-1, -1)
+]
 
 
-
-DEBUG = False
 
 def debug(*args, **kwargs):
     if DEBUG:
         print(*args, **kwargs)
 
-screen = pygame.display.set_mode((1100, 900))
-pygame.display.set_caption('bot makes chess')
-clock = pygame.time.Clock()
 
-BASE_DIR = Path(__file__).resolve().parent
+img = pygame.image.load(
+    str(IMAGE_DIR / "bg.jpg")
+).convert()
 
-# Image directories
-IMAGE_DIR = BASE_DIR / "images"
-PIECES_DIR = IMAGE_DIR / "Pieces"
-MOVEMARKER_DIR = IMAGE_DIR / "Movemarkers"
+img = pygame.transform.smoothscale(
+    img, screen.get_size()
+)
 
-# Background
-img = pygame.image.load(str(IMAGE_DIR / "bg.jpg")).convert()
-img = pygame.transform.smoothscale(img, screen.get_size())
-
-# Move marker
 MoveMarker = pygame.image.load(
     str(MOVEMARKER_DIR / "movemarker.png")
 ).convert_alpha()
-MoveMarker = pygame.transform.scale_by(MoveMarker, 0.1)
 
-# Black pieces
-rook1 = pygame.image.load(str(PIECES_DIR / "rook1.png")).convert_alpha()
-BBishop = pygame.image.load(str(PIECES_DIR / "bishop1.png")).convert_alpha()
-BKnight = pygame.image.load(str(PIECES_DIR / "knight1.png")).convert_alpha()
-BQueen = pygame.image.load(str(PIECES_DIR / "queen1.png")).convert_alpha()
-BKing = pygame.image.load(str(PIECES_DIR / "king1.png")).convert_alpha()
-Bpawn = pygame.image.load(str(PIECES_DIR / "pawn1.png")).convert_alpha()
-
-# White pieces
-WRook = pygame.image.load(str(PIECES_DIR / "rook.png")).convert_alpha()
-WBishop = pygame.image.load(str(PIECES_DIR / "bishop.png")).convert_alpha()
-WKnight = pygame.image.load(str(PIECES_DIR / "knight.png")).convert_alpha()
-Wqueen = pygame.image.load(str(PIECES_DIR / "queen.png")).convert_alpha()
-WKing = pygame.image.load(str(PIECES_DIR / "king.png")).convert_alpha()
-Wpawn = pygame.image.load(str(PIECES_DIR / "pawn.png")).convert_alpha()
+MoveMarker = pygame.transform.scale_by(
+    MoveMarker, 0.1
+)
 
 
-#board
-board_surface = pygame.Surface((600,600))
-board_surface.fill('blue')
+board_surface = pygame.Surface((600, 600))
+board_surface.fill("blue")
 
-#board-squares
-square1 = pygame.Surface((75,75))
-square1.fill(pygame.Color('#d28b48'))
-square2 = pygame.Surface((75,75))
-square2.fill(pygame.Color('#ffcd9f'))
+square1 = pygame.Surface((Square_size, Square_size))
+square1.fill(pygame.Color("#d28b48"))
 
-#font and text
+square2 = pygame.Surface((Square_size, Square_size))
+square2.fill(pygame.Color("#ffcd9f"))
+
+
 font = pygame.font.SysFont("Arial", 36)
-text_surface = font.render("Press R to restart", True, (255, 255, 255))
+text_surface = font.render(
+    "Press R to restart",
+    True,
+    (255, 255, 255)
+)
+
 
 x = 90
 y = 100
 board_coordinates = []
+
 
 def KingPOS(turn):
     row_counter = 0
@@ -406,19 +465,17 @@ def checkdetection(king_row, king_col, origin=None):
     return False
 
 
-def place_pieces(board_coordinates, PIECES_DIR, board):
+def place_pieces(board_coordinates, board):
     #given the board position determine what piece should be there
     piece_rect_list = []
     # piece_surfaces = []
     for row in range(8):
          for col in range(8):
             piece_pos = board_coordinates[row * 8 + col]
-            if board[row][col]:
-                piece_path = PIECES_DIR / f"{board[row][col]}.png"
-                piece = pygame.transform.scale_by(
-                    pygame.image.load(str(piece_path)).convert_alpha(),
-                    1.2
-                )
+            cell = get_cell(row,col)
+            if cell is not None and cell != "":
+                # piece_path = PIECES_DIR / f"{board[row][col]}.png"
+                piece = piece_images[board[row][col]]
                 piece_rect_list.append(piece.get_rect(topleft = ((piece_pos[0] + 37) - (piece.get_width()/2), (piece_pos[1] + 37) - (piece.get_height()/2))))
                 screen.blit(piece, ((piece_pos[0] + 37) - (piece.get_width()/2) , (piece_pos[1] + 37) - (piece.get_height()/2)))
     return piece_rect_list
@@ -481,7 +538,7 @@ def generateBoard(x,y,board_coordinates):
             board_coordinates.append((x,y))
 
 
-            pygame.draw.rect(screen, (0, 0, 0), (x, y, 75, 75), 1)
+            pygame.draw.rect(screen, (0, 0, 0), (x, y, Square_size, Square_size), 1)
             x+=75    
         y+=75
         x=90
@@ -522,6 +579,75 @@ def WinCheck(turn):
        else: state = "stalemate"
     return state
 
+def PromotionCheck(row, col):
+    cell = get_cell(row, col)
+
+    if not cell or "pawn" not in cell:
+        return False
+
+    if cell.endswith("1"): 
+        return row == 7
+
+    return row == 0
+                
+            
+
+def promoting(row, col):
+    promotion_pieces = ["queen", "rook", "bishop", "knight"]
+    promotion_rects = []
+
+    cell = get_cell(row, col)
+    if cell is None or cell == "":
+        return promotion_rects
+
+    is_black = "1" in cell
+    suffix = "1" if is_black else ""
+
+    piece_x, piece_y = board_coordinates[row * 8 + col]
+
+    for i, piece in enumerate(promotion_pieces):
+        option_x = piece_x
+        option_y = piece_y + (-i * Square_size if is_black else i * Square_size)
+
+        square_rect = pygame.Rect(
+            option_x, option_y, Square_size, Square_size
+        )
+        promotion_rects.append(square_rect)
+
+        pygame.draw.rect(screen, pygame.Color("#808080"), square_rect)
+
+        image = promotion_images[f"{piece}{suffix}"]
+        image_rect = image.get_rect(center=square_rect.center)
+        screen.blit(image, image_rect)
+
+    return promotion_rects
+
+def PromotePawn(row, col, piece):
+    global board, ispromoting, promotion_rects,state,turn
+
+    cell = get_cell(row, col)
+    debug(f"PromotePawn called. Turn before: {turn}")
+
+    if cell is None or "pawn" not in cell:
+        return
+
+    suffix = "1" if "1" in cell else ""
+
+    board[row][col] = f"{piece}{suffix}"
+
+    ispromoting = False
+    promotion_rects = []
+
+    if turn == "W": 
+        turn = "B"
+    else: turn = "W"
+
+    debug(f"Turn after switch: {turn}")
+
+    state = WinCheck(turn)
+
+
+    
 
 
 board_coordinates = generateBoard(x,y,board_coordinates)
@@ -540,50 +666,87 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
+
         if event.type == pygame.KEYDOWN:
             if state in ("checkmate", "stalemate") and event.key == pygame.K_r:
                 restart_game()
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if state == "neutral":
-                col = (event.pos[0] - x)//75
-                row = (event.pos[1] - y)//75
-                if 0 <= row < 8 and 0 <= col < 8:
-                    piece = get_cell(row,col)
-                    if piece != None:
-                        if "1" in piece:
-                            color = "B"
-                        else:
-                            color = "W"
-                        hit = False
-                        for idx,marker in enumerate(marker_rects):
-                            if marker.collidepoint(event.pos):
-                                debug(f"you clicked marker {idx}")
-                                hit = True
-                                MakeMove(SelectedPiece,col,row,LegalMoves)
-                                LegalMoves = []
-                                if turn == "W": turn = "B"
-                                else: turn = "W"
-                                state = WinCheck(turn)
-                                debug(state)
-                                break
-                        if not hit:
-                            for piece_rect in piece_rect_list:
-                                if piece_rect.collidepoint(event.pos):
-                                    if turn == color:
-                                        debug(f"click: {event.pos} → grid: ({row}, {col})")
-                                        LegalMoves = Legal_moves(row,col)
-                                        debug(f"Knight at ({row},{col}) → moves: {LegalMoves}")   
-                                        SelectedPiece = (row,col)
-                                        break
-                        else:
-                            break
 
-            
+        if event.type == pygame.MOUSEBUTTONDOWN:
+                col = (event.pos[0] - x)//Square_size
+                row = (event.pos[1] - y)//Square_size
+
+                if ispromoting:
+                    promotion_pieces = ["queen", "rook", "bishop", "knight"]
+                    debug("promoting")
+                    for i, rect in enumerate(promotion_rects):
+                        debug(f"Option: {promotion_pieces[i]}, rect: {rect}")
+                        if rect.collidepoint(event.pos):
+                            debug(f"Selected promotion: {promotion_pieces[i]}")
+                            PromotePawn(
+                                promotion_row,
+                                promotion_col,
+                                promotion_pieces[i]
+                            )
+                            break
+                    continue
+
+                elif state == "neutral":
+                    if 0 <= row < 8 and 0 <= col < 8:
+                        piece = get_cell(row,col)
+                        if piece != None:
+                            if "1" in piece:
+                                color = "B"
+                            else:
+                                color = "W"
+
+                            hit = False
+
+                            for idx,marker in enumerate(marker_rects):
+                                if marker.collidepoint(event.pos):
+                                    debug(f"you clicked marker {idx}")
+                                    hit = True
+                                    MakeMove(SelectedPiece,col,row,LegalMoves)
+
+                                    ispromoting = PromotionCheck(row,col)
+
+                                    if ispromoting:
+                                        promotion_row = row
+                                        promotion_col = col
+                                        promotion_rects = promoting(promotion_row, promotion_col)
+                                        promotion_pieces = ["queen", "rook", "bishop", "knight"]
+                                    else:
+                                        if turn == "W":
+                                            turn = "B"
+                                        else:
+                                            turn = "W"
+                                        state = WinCheck(turn)
+
+                                    LegalMoves = []
+                                    break
+
+                                    
+                            if not hit:
+                                for piece_rect in piece_rect_list:
+                                    if piece_rect.collidepoint(event.pos):
+                                        if turn == color:
+                                            debug(f"click: {event.pos} → grid: ({row}, {col})")
+                                            LegalMoves = Legal_moves(row,col)
+                                            debug(f"Knight at ({row},{col}) → moves: {LegalMoves}")   
+                                            SelectedPiece = (row,col)
+                                            break
+
+                
+        
     #render
     screen.blit(img, (0,0))
     screen.blit(board_surface, (90,100))
     generateBoard(x,y,board_coordinates) 
-    piece_rect_list = place_pieces(board_coordinates,PIECES_DIR,board)
+    piece_rect_list = place_pieces(board_coordinates,board)
+
+
+    if ispromoting:
+        promotion_rects = promoting(promotion_row,promotion_col)
+
 
     if state == "checkmate" or state == "stalemate":
         screen.blit(text_surface, (50, 50)) 
