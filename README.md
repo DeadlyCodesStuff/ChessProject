@@ -13,10 +13,10 @@ When a piece is selected, visual markers highlight its legal moves while account
 - **Graphical Board:** Renders an \(8 \times 8\) grid with alternating square colors and a custom background.
 - **Piece Sprites:** Loads individual image files for all standard chess pieces for both sides.
 - **Turn Tracking:** Switches active control between White and Black after every successful move.
-- **Movement Logic and Validation:** Calculates moves for pawns, knights, bishops, rooks, queens, and kings, incorporating king safety checks to prevent moves that leave the king in check.
+- **Movement Logic and Validation:** Calculates moves for pawns, knights, bishops, rooks, queens, and kings, incorporating king safety checks to prevent moves that leave the king in check. 
 - **Move Markers:** Displays visual indicators on valid destination squares when a piece is selected.
 - **Checkmate and Stalemate Detection:** Evaluates the board state at the start of each turn to detect checkmate, stalemate, or ongoing play.
-- **Robust Click Handling:** Handles clicks outside the board boundaries without crashing the application.
+
 
  Controls and Instructions
 
