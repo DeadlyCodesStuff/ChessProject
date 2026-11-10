@@ -24,6 +24,10 @@ pending_notation = None
 pending_notation_turn = None
 Capture = False
 en_peassant = None
+castling_rights = {
+    "W": {"K": True, "Q": True},
+    "B": {"K": True, "Q": True},
+}
 
 
 
@@ -175,6 +179,9 @@ def MoveNotation(start, end):
     target_row, target_col = end
     piece = board[row][col]
     piece_type = piece[:-1] if piece.endswith("1") else piece
+    if piece_type == "king" and row == target_row and abs(target_col - col) == 2:
+        return "O-O" if target_col > col else "O-O-O"
+
     is_capture = bool(board[target_row][target_col])
     if piece_type == "pawn" and col != target_col:
         is_capture = True
@@ -519,10 +526,43 @@ def kinglegalmoves(Movemarkers, row, col):
                     debug(f"  ({r},{c}) -> enemy piece ({cell}), safe capture, marking square")
                     Movemarkers.append((r, c))
 
+    Movemarkers.extend(CastlingMoves(row, col, piece))
     return Movemarkers   
+
+
+def CastlingMoves(row, col, piece):
+    color = "B" if piece == "king1" else "W"
+    home_row = 0 if color == "B" else 7
+    if (row, col) != (home_row, 4):
+        return []
+    if checkdetection(row, col, origin=(row, col)):
+        return []
+
+    moves = []
+    castle_sides = (
+        ("K", 7, (5, 6), (5, 6)),
+        ("Q", 0, (3, 2, 1), (3, 2)),
+    )
+    for side, rook_col, empty_cols, safe_cols in castle_sides:
+        if not castling_rights[color][side]:
+            continue
+        expected_rook = "rook1" if color == "B" else "rook"
+        if board[home_row][rook_col] != expected_rook:
+            continue
+        if any(board[home_row][path_col] != "" for path_col in empty_cols):
+            continue
+        if any(
+            checkdetection(home_row, path_col, origin=(row, col))
+            for path_col in safe_cols
+        ):
+            continue
+        moves.append((home_row, 6 if side == "K" else 2))
+    return moves
+
 
 def MakeMove(SelectedPiece,col,row,LegalMoves):
     global en_peassant
+    global castling_rights
     if not SelectedPiece:
         print("No piece selected")
         return[]
@@ -534,6 +574,7 @@ def MakeMove(SelectedPiece,col,row,LegalMoves):
         return []
     piece = board[r][c]
     captured = board[row][col]
+    captured_position = (row, col)
 
     is_ep_capture = (
         piece in ("pawn", "pawn1")
@@ -547,6 +588,34 @@ def MakeMove(SelectedPiece,col,row,LegalMoves):
         captured_pawn_c = col
         captured = board[captured_pawn_r][captured_pawn_c]
         board[captured_pawn_r][captured_pawn_c] = ""
+
+    if piece in ("king", "king1"):
+        color = "B" if piece == "king1" else "W"
+        castling_rights[color]["K"] = False
+        castling_rights[color]["Q"] = False
+        if abs(col - c) == 2:
+            rook_start_col = 7 if col > c else 0
+            rook_end_col = col - 1 if col > c else col + 1
+            board[row][rook_end_col] = board[row][rook_start_col]
+            board[row][rook_start_col] = ""
+
+    if piece in ("rook", "rook1"):
+        color = "B" if piece == "rook1" else "W"
+        home_row = 0 if color == "B" else 7
+        if r == home_row:
+            if c == 0:
+                castling_rights[color]["Q"] = False
+            elif c == 7:
+                castling_rights[color]["K"] = False
+
+    if captured in ("rook", "rook1"):
+        color = "B" if captured == "rook1" else "W"
+        home_row = 0 if color == "B" else 7
+        if captured_position[0] == home_row:
+            if captured_position[1] == 0:
+                castling_rights[color]["Q"] = False
+            elif captured_position[1] == 7:
+                castling_rights[color]["K"] = False
 
     board[row][col] = piece
     board[r][c] = ""
@@ -640,6 +709,7 @@ def place_pieces(board_coordinates, board):
 def restart_game():
     global board, turn, state, SelectedPiece, LegalMoves, marker_rects
     global Chess_Notation, pending_notation, pending_notation_turn, en_peassant
+    global castling_rights
 
     board = [
         ["rook1", "knight1", "bishop1", "queen1", "king1", "bishop1", "knight1", "rook1"],
@@ -661,6 +731,10 @@ def restart_game():
     pending_notation = None
     pending_notation_turn = None
     en_peassant = None
+    castling_rights = {
+        "W": {"K": True, "Q": True},
+        "B": {"K": True, "Q": True},
+    }
 
 def Legal_moves(row,col):
     MoveMarkers = []
