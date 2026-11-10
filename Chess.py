@@ -188,43 +188,33 @@ def KingPOS(turn):
 
     return None
 
-def LeavesKingInCheck(turn, start, end):
+def LeavesKingInCheck(turn, start, end, captured_square=None):
     r, c = start
     nr, nc = end
 
     piece = board[r][c]
     captured = board[nr][nc]
+    captured_piece = None
+
+    if captured_square is not None:
+        captured_r, captured_c = captured_square
+        captured_piece = board[captured_r][captured_c]
 
     board[nr][nc] = piece
     board[r][c] = ""
-
-    x,y = KingPOS(turn)
-    in_check = checkdetection(x, y, None)
-
-    board[r][c] = piece
-    board[nr][nc] = captured
-
-    return in_check
-
-
-def EnPassantLeavesKingInCheck(turn, start, end, captured):
-    r, c = start
-    nr, nc = end
-    captured_r, captured_c = captured
-    piece = board[r][c]
-    captured_piece = board[captured_r][captured_c]
-
-    board[nr][nc] = piece
-    board[r][c] = ""
-    board[captured_r][captured_c] = ""
+    if captured_square is not None:
+        board[captured_r][captured_c] = ""
 
     try:
         king_position = KingPOS(turn)
         return checkdetection(king_position[0], king_position[1], None)
     finally:
         board[r][c] = piece
-        board[nr][nc] = ""
-        board[captured_r][captured_c] = captured_piece
+        board[nr][nc] = captured
+        if captured_square is not None:
+            board[captured_r][captured_c] = captured_piece
+
+
 
 
 def EnPassantTarget(turn, row, col):
@@ -331,8 +321,9 @@ def PawnLegalMoves(MoveMarkers,row,col):
         en_passant_target = EnPassantTarget(turn, row, col)
         if en_passant_target is not None:
             captured = (row, en_passant_target[1])
-            if not EnPassantLeavesKingInCheck(
-                turn, (row, col), en_passant_target, captured
+            if not LeavesKingInCheck(
+                turn, (row, col), en_passant_target,
+                captured_square=captured
             ):
                 MoveMarkers.append(en_passant_target)
     return MoveMarkers
