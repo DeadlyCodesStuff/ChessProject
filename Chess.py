@@ -29,6 +29,7 @@ castling_rights = {
     "B": {"K": True, "Q": True},
 }
 position_counts = {}
+halfmove_clock = 0
 
 
 
@@ -604,6 +605,7 @@ def CastlingMoves(row, col, piece):
 def MakeMove(SelectedPiece,col,row,LegalMoves):
     global en_peassant
     global castling_rights
+    global halfmove_clock
     if not SelectedPiece:
         print("No piece selected")
         return[]
@@ -667,6 +669,10 @@ def MakeMove(SelectedPiece,col,row,LegalMoves):
     else:
         en_peassant = None
 
+    if piece in ("pawn", "pawn1") or captured:
+        halfmove_clock = 0
+    else:
+        halfmove_clock += 1
 
     return {"moved": piece, "captured": captured}
 
@@ -750,7 +756,7 @@ def place_pieces(board_coordinates, board):
 def restart_game():
     global board, turn, state, SelectedPiece, LegalMoves, marker_rects
     global Chess_Notation, pending_notation, pending_notation_turn, en_peassant
-    global castling_rights, position_counts
+    global castling_rights, position_counts, halfmove_clock
 
     board = [
         ["rook1", "knight1", "bishop1", "queen1", "king1", "bishop1", "knight1", "rook1"],
@@ -777,6 +783,7 @@ def restart_game():
         "B": {"K": True, "Q": True},
     }
     position_counts = {PositionKey(turn): 1}
+    halfmove_clock = 0
 
 def Legal_moves(row,col):
     MoveMarkers = []
@@ -943,13 +950,21 @@ def PromotePawn(row, col, piece):
 
     state = WinCheck(turn)
     RecordNotation(pending_notation, pending_notation_turn, piece)
-    if state == "neutral" and RecordPosition(turn):
-        state = "draw"
+    UpdateDrawState(turn)
     pending_notation = None
     pending_notation_turn = None
 
 
-    
+def UpdateDrawState(turn):
+    global state
+    if state != "neutral":
+        return
+    if RecordPosition(turn):
+        state = "draw"
+    elif halfmove_clock >= 100:
+        state = "draw_50_move"
+
+
 
 
 board_coordinates = generateBoard(x,y,board_coordinates)
@@ -971,7 +986,7 @@ while True:
             exit()
 
         if event.type == pygame.KEYDOWN:
-            if state in ("checkmate", "stalemate", "draw") and event.key == pygame.K_r:
+            if state in ("checkmate", "stalemate", "draw", "draw_50_move") and event.key == pygame.K_r:
                 restart_game()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -1030,8 +1045,7 @@ while True:
                                             turn = "W"
                                         state = WinCheck(turn)
                                         RecordNotation(notation, move_side)
-                                        if state == "neutral" and RecordPosition(turn):
-                                            state = "draw"
+                                        UpdateDrawState(turn)
 
                                     LegalMoves = []
                                     break
@@ -1064,6 +1078,12 @@ while True:
     if state == "draw":
         draw_surface = font.render(
             "Draw by threefold repetition", True, (255, 255, 255)
+        )
+        screen.blit(draw_surface, (50, 50))
+        screen.blit(text_surface, (50, 100))
+    elif state == "draw_50_move":
+        draw_surface = font.render(
+            "Draw by 50-move rule", True, (255, 255, 255)
         )
         screen.blit(draw_surface, (50, 50))
         screen.blit(text_surface, (50, 100))

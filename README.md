@@ -71,4 +71,4 @@ When a piece is selected, visual markers highlight its legal moves while account
  Current Limitations and Unfinished Features
 
 - **Game Modes:** The game currently supports local two-player play only; there is no computer opponent or network play.
-- **Draw Rules:** Threefold repetition is an automatic draw. The fifty-move rule and insufficient-material draws are not implemented.
+- **Draw Rules:** Threefold repetition and the 50-move rule are automatic draws. The 50-move counter tracks half-moves and resets after a pawn move or capture. Insufficient-material draws are not implemented.
