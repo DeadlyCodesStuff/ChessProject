@@ -2,7 +2,6 @@
 import pygame
 from pathlib import Path
 
-
 pygame.init()
 
 screen = pygame.display.set_mode((1100, 900))
@@ -20,6 +19,10 @@ Square_size = 75
 DEBUG = False
 ispromoting = False
 pawn_pos = ()
+Capture = False
+en_peassant = None
+
+
 
 
 board = [
@@ -66,6 +69,8 @@ promotion_images = {
         "queen1", "rook1", "bishop1", "knight1"
     ]
 }
+
+Chess_Notation = {}
 
 
 
@@ -151,6 +156,19 @@ x = 90
 y = 100
 board_coordinates = []
 
+def MoveHistory():
+
+
+    return
+
+def getnotation(piece):
+    if "knight" not in piece and "pawn" not in piece:
+        Piece_notation = piece.slice(1)
+        return Piece_notation
+    elif "knight" in piece: Piece_notation = "Kn"
+
+    else: return
+    
 
 def KingPOS(turn):
     row_counter = 0
@@ -189,12 +207,56 @@ def LeavesKingInCheck(turn, start, end):
     return in_check
 
 
+def EnPassantLeavesKingInCheck(turn, start, end, captured):
+    r, c = start
+    nr, nc = end
+    captured_r, captured_c = captured
+    piece = board[r][c]
+    captured_piece = board[captured_r][captured_c]
+
+    board[nr][nc] = piece
+    board[r][c] = ""
+    board[captured_r][captured_c] = ""
+
+    try:
+        king_position = KingPOS(turn)
+        return checkdetection(king_position[0], king_position[1], None)
+    finally:
+        board[r][c] = piece
+        board[nr][nc] = ""
+        board[captured_r][captured_c] = captured_piece
+
+
+def EnPassantTarget(turn, row, col):
+    piece = get_cell(row, col)
+    if piece not in ("pawn", "pawn1") or en_peassant is None:
+        return None
+
+    color = "B" if piece == "pawn1" else "W"
+    if color != turn or row != (4 if color == "B" else 3):
+        return None
+
+    direction = 1 if color == "B" else -1
+    target_row, target_col = en_peassant
+    if target_row != row + direction or abs(target_col - col) != 1:
+        return None
+    if get_cell(target_row, target_col) != "":
+        return None
+
+    captured_piece = get_cell(row, target_col)
+    expected_piece = "pawn" if color == "B" else "pawn1"
+    if captured_piece != expected_piece:
+        return None
+
+    return target_row, target_col
+
+
 
 def get_cell(row, col):
     if row < 0 or col < 0 or row >= 8 or col >= 8:
         return None
     return board[row][col] 
- 
+
 def get_color(row,col):
     piece = board[row][col]
     if "1" in piece:
@@ -265,6 +327,14 @@ def PawnLegalMoves(MoveMarkers,row,col):
             elif get_cell(r - 1, c) == "":
                 if not LeavesKingInCheck(turn,(row,col),(r-1,c)):
                     MoveMarkers.append((r - 1, c))
+
+        en_passant_target = EnPassantTarget(turn, row, col)
+        if en_passant_target is not None:
+            captured = (row, en_passant_target[1])
+            if not EnPassantLeavesKingInCheck(
+                turn, (row, col), en_passant_target, captured
+            ):
+                MoveMarkers.append(en_passant_target)
     return MoveMarkers
 
 
@@ -283,7 +353,8 @@ def KnightLegalMoves(MoveMarkers,row,col,knight_offsets):
             if (Color == "B" and not is_black_target) or (Color == "W" and is_black_target):
                 if not LeavesKingInCheck(turn,(row,col),(row+dr,col+dc)):
                     MoveMarkers.append((row + dr, col + dc))
-    return MoveMarkers   
+    return MoveMarkers
+
  
             
 def BishopLegalMoves(MoveMarkers, row, col, bishop_offsets):
@@ -389,6 +460,7 @@ def kinglegalmoves(Movemarkers, row, col):
     return Movemarkers   
 
 def MakeMove(SelectedPiece,col,row,LegalMoves):
+    global en_peassant
     if not SelectedPiece:
         print("No piece selected")
         return[]
@@ -400,8 +472,30 @@ def MakeMove(SelectedPiece,col,row,LegalMoves):
         return []
     piece = board[r][c]
     captured = board[row][col]
+
+    is_ep_capture = (
+        piece in ("pawn", "pawn1")
+        and (row, col) == en_peassant
+        and captured == ""
+        and col != c
+    )
+
+    if is_ep_capture:
+        captured_pawn_r = r
+        captured_pawn_c = col
+        captured = board[captured_pawn_r][captured_pawn_c]
+        board[captured_pawn_r][captured_pawn_c] = ""
+
     board[row][col] = piece
     board[r][c] = ""
+
+    if piece in ("pawn", "pawn1") and abs(row - r) == 2:
+        jump_row = (r+row) // 2
+        en_peassant = (jump_row,c)
+    else:
+        en_peassant = None
+
+
     return {"moved": piece, "captured": captured}
 
 def checkdetection(king_row, king_col, origin=None):
@@ -482,7 +576,7 @@ def place_pieces(board_coordinates, board):
 
 
 def restart_game():
-    global board, turn, state, SelectedPiece, LegalMoves, marker_rects
+    global board, turn, state, SelectedPiece, LegalMoves, marker_rects, en_peassant
 
     board = [
         ["rook1", "knight1", "bishop1", "queen1", "king1", "bishop1", "knight1", "rook1"],
@@ -500,6 +594,7 @@ def restart_game():
     SelectedPiece = None
     LegalMoves = []
     marker_rects = []
+    en_peassant = None
 
 def Legal_moves(row,col):
     MoveMarkers = []
@@ -705,7 +800,7 @@ while True:
                                 if marker.collidepoint(event.pos):
                                     debug(f"you clicked marker {idx}")
                                     hit = True
-                                    MakeMove(SelectedPiece,col,row,LegalMoves)
+                                    Move_info = MakeMove(SelectedPiece,col,row,LegalMoves)
 
                                     ispromoting = PromotionCheck(row,col)
 
