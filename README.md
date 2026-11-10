@@ -71,4 +71,4 @@ When a piece is selected, visual markers highlight its legal moves while account
  Current Limitations and Unfinished Features
 
 - **Game Modes:** The game currently supports local two-player play only; there is no computer opponent or network play.
-- **Draw Rules:** Threefold repetition, the fifty-move rule, and insufficient-material draws are not implemented.
+- **Draw Rules:** Threefold repetition is an automatic draw. The fifty-move rule and insufficient-material draws are not implemented.

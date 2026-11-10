@@ -28,6 +28,7 @@ castling_rights = {
     "W": {"K": True, "Q": True},
     "B": {"K": True, "Q": True},
 }
+position_counts = {}
 
 
 
@@ -315,6 +316,46 @@ def EnPassantTarget(turn, row, col):
         return None
 
     return target_row, target_col
+
+
+def PositionKey(turn):
+    en_passant_target = None
+    if en_peassant is not None:
+        for row in range(8):
+            for col in range(8):
+                piece = get_cell(row, col)
+                color = "B" if piece == "pawn1" else "W"
+                if piece not in ("pawn", "pawn1") or color != turn:
+                    continue
+                target = EnPassantTarget(turn, row, col)
+                if target is not None and not LeavesKingInCheck(
+                    turn,
+                    (row, col),
+                    target,
+                    captured_square=(row, target[1]),
+                ):
+                    en_passant_target = en_peassant
+                    break
+            if en_passant_target is not None:
+                break
+
+    return (
+        tuple(tuple(row) for row in board),
+        turn,
+        (
+            castling_rights["W"]["K"],
+            castling_rights["W"]["Q"],
+            castling_rights["B"]["K"],
+            castling_rights["B"]["Q"],
+        ),
+        en_passant_target,
+    )
+
+
+def RecordPosition(turn):
+    position = PositionKey(turn)
+    position_counts[position] = position_counts.get(position, 0) + 1
+    return position_counts[position] >= 3
 
 
 
@@ -709,7 +750,7 @@ def place_pieces(board_coordinates, board):
 def restart_game():
     global board, turn, state, SelectedPiece, LegalMoves, marker_rects
     global Chess_Notation, pending_notation, pending_notation_turn, en_peassant
-    global castling_rights
+    global castling_rights, position_counts
 
     board = [
         ["rook1", "knight1", "bishop1", "queen1", "king1", "bishop1", "knight1", "rook1"],
@@ -735,6 +776,7 @@ def restart_game():
         "W": {"K": True, "Q": True},
         "B": {"K": True, "Q": True},
     }
+    position_counts = {PositionKey(turn): 1}
 
 def Legal_moves(row,col):
     MoveMarkers = []
@@ -901,6 +943,8 @@ def PromotePawn(row, col, piece):
 
     state = WinCheck(turn)
     RecordNotation(pending_notation, pending_notation_turn, piece)
+    if state == "neutral" and RecordPosition(turn):
+        state = "draw"
     pending_notation = None
     pending_notation_turn = None
 
@@ -914,6 +958,7 @@ marker_rects = []
 SelectedPiece = ()
 turn = "W"
 state = WinCheck(turn)
+position_counts = {PositionKey(turn): 1}
 
 
 
@@ -926,7 +971,7 @@ while True:
             exit()
 
         if event.type == pygame.KEYDOWN:
-            if state in ("checkmate", "stalemate") and event.key == pygame.K_r:
+            if state in ("checkmate", "stalemate", "draw") and event.key == pygame.K_r:
                 restart_game()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -985,6 +1030,8 @@ while True:
                                             turn = "W"
                                         state = WinCheck(turn)
                                         RecordNotation(notation, move_side)
+                                        if state == "neutral" and RecordPosition(turn):
+                                            state = "draw"
 
                                     LegalMoves = []
                                     break
@@ -1014,8 +1061,14 @@ while True:
         promotion_rects = promoting(promotion_row,promotion_col)
 
 
-    if state == "checkmate" or state == "stalemate":
-        screen.blit(text_surface, (50, 50)) 
+    if state == "draw":
+        draw_surface = font.render(
+            "Draw by threefold repetition", True, (255, 255, 255)
+        )
+        screen.blit(draw_surface, (50, 50))
+        screen.blit(text_surface, (50, 100))
+    elif state == "checkmate" or state == "stalemate":
+        screen.blit(text_surface, (50, 50))
     else:
         marker_rects = []
         if LegalMoves:
