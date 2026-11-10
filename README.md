@@ -13,7 +13,10 @@ When a piece is selected, visual markers highlight its legal moves while account
 - **Graphical Board:** Renders an \(8 \times 8\) grid with alternating square colors and a custom background.
 - **Piece Sprites:** Loads individual image files for all standard chess pieces for both sides.
 - **Turn Tracking:** Switches active control between White and Black after every successful move.
-- **Movement Logic and Validation:** Calculates moves for pawns, knights, bishops, rooks, queens, and kings, incorporating king safety checks to prevent moves that leave the king in check. 
+- **Movement Logic and Validation:** Calculates legal moves for all pieces and prevents moves that leave the moving side's king in check.
+- **Special Moves:** Supports castling and en passant, including castling rights, attacked-square checks, and en passant king-safety validation.
+- **Pawn Promotion:** Lets a pawn reaching the final rank promote to a queen, rook, bishop, or knight.
+- **Move History:** Displays algebraic move notation, including captures, disambiguation, promotion, check, checkmate, and castling.
 - **Move Markers:** Displays visual indicators on valid destination squares when a piece is selected.
 - **Checkmate and Stalemate Detection:** Evaluates the board state at the start of each turn to detect checkmate, stalemate, or ongoing play.
 
@@ -22,8 +25,9 @@ When a piece is selected, visual markers highlight its legal moves while account
 
 - **Select a Piece:** Left-click one of your pieces when it is your turn.
 - **View Legal Moves:** Available destination squares are highlighted with move markers.
-- **Make a Move:** Click a highlighted destination square to execute the move and pass the turn.
-- **Restart:** Once checkmate or stalemate occurs, use the designated restart control to reset the board.
+- **Make a Move:** Click a highlighted destination square to move. Castling and en passant appear among legal moves when available.
+- **Promote a Pawn:** Choose a queen, rook, bishop, or knight from the promotion menu when a pawn reaches the final rank.
+- **Restart:** Press **R** after checkmate or stalemate to reset the board.
 
  Prerequisites
 
@@ -66,6 +70,5 @@ When a piece is selected, visual markers highlight its legal moves while account
 
  Current Limitations and Unfinished Features
 
-- **Special Moves:** Castling and *en passant* are not yet supported.
-- **Pawn Promotion:** Reaching the final rank with a pawn does not yet trigger a promotion selection menu.
-
+- **Game Modes:** The game currently supports local two-player play only; there is no computer opponent or network play.
+- **Draw Rules:** Threefold repetition, the fifty-move rule, and insufficient-material draws are not implemented.
