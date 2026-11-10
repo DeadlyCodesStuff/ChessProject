@@ -20,6 +20,9 @@ Square_size = 75
 DEBUG = False
 ispromoting = False
 pawn_pos = ()
+Chess_Notation = {}
+pending_notation = None
+pending_notation_turn = None
 
 
 board = [
@@ -150,6 +153,87 @@ text_surface = font.render(
 x = 90
 y = 100
 board_coordinates = []
+
+
+def getnotation(piece):
+    piece_name = piece[:-1] if piece.endswith("1") else piece
+    return {
+        "pawn": "",
+        "knight": "N",
+        "bishop": "B",
+        "rook": "R",
+        "queen": "Q",
+        "king": "K",
+    }.get(piece_name, "")
+
+
+def MoveNotation(start, end):
+    row, col = start
+    target_row, target_col = end
+    piece = board[row][col]
+    piece_type = piece[:-1] if piece.endswith("1") else piece
+    is_capture = bool(board[target_row][target_col])
+    if piece_type == "pawn" and col != target_col:
+        is_capture = True
+
+    notation = getnotation(piece)
+    if piece_type == "pawn" and is_capture:
+        notation += "abcdefgh"[col]
+    elif piece_type != "pawn":
+        alternatives = []
+        for other_row in range(8):
+            for other_col in range(8):
+                if (other_row, other_col) == start:
+                    continue
+                other_piece = board[other_row][other_col]
+                other_type = (
+                    other_piece[:-1]
+                    if other_piece.endswith("1")
+                    else other_piece
+                )
+                if (
+                    other_piece
+                    and other_type == piece_type
+                    and ("1" in other_piece) == ("1" in piece)
+                    and end in Legal_moves(other_row, other_col)
+                ):
+                    alternatives.append((other_row, other_col))
+
+        if alternatives:
+            same_file = any(other_col == col for _, other_col in alternatives)
+            same_rank = any(other_row == row for other_row, _ in alternatives)
+            if not same_file:
+                notation += "abcdefgh"[col]
+            elif not same_rank:
+                notation += str(8 - row)
+            else:
+                notation += "abcdefgh"[col] + str(8 - row)
+
+    if is_capture:
+        notation += "x"
+    notation += "abcdefgh"[target_col] + str(8 - target_row)
+    return notation
+
+
+def RecordNotation(notation, side, promotion=None):
+    if promotion is not None:
+        notation += f"={getnotation(promotion)}"
+
+    opponent = "B" if side == "W" else "W"
+    king_position = KingPOS(opponent)
+    if state == "checkmate":
+        notation += "#"
+    elif king_position is not None and checkdetection(
+        king_position[0], king_position[1], None
+    ):
+        notation += "+"
+
+    if side == "W":
+        move_number = max(Chess_Notation, default=0) + 1
+        Chess_Notation[move_number] = {"W": notation}
+    else:
+        move_number = max(Chess_Notation, default=1)
+        Chess_Notation.setdefault(move_number, {})["B"] = notation
 
 
 def KingPOS(turn):
@@ -483,6 +567,7 @@ def place_pieces(board_coordinates, board):
 
 def restart_game():
     global board, turn, state, SelectedPiece, LegalMoves, marker_rects
+    global Chess_Notation, pending_notation, pending_notation_turn
 
     board = [
         ["rook1", "knight1", "bishop1", "queen1", "king1", "bishop1", "knight1", "rook1"],
@@ -500,6 +585,9 @@ def restart_game():
     SelectedPiece = None
     LegalMoves = []
     marker_rects = []
+    Chess_Notation = {}
+    pending_notation = None
+    pending_notation_turn = None
 
 def Legal_moves(row,col):
     MoveMarkers = []
@@ -579,6 +667,25 @@ def WinCheck(turn):
        else: state = "stalemate"
     return state
 
+
+def MoveHistory():
+    history_font = pygame.font.SysFont("Arial", 22)
+    title = history_font.render("Move history", True, (255, 255, 255))
+    screen.blit(title, (720, 100))
+
+    move_numbers = sorted(Chess_Notation)[-20:]
+    for index, move_number in enumerate(move_numbers):
+        moves = Chess_Notation[move_number]
+        white_move = moves.get("W", "")
+        black_move = moves.get("B", "")
+        text = history_font.render(
+            f"{move_number}. {white_move}   {black_move}",
+            True,
+            (255, 255, 255),
+        )
+        screen.blit(text, (720, 135 + index * 28))
+
+
 def PromotionCheck(row, col):
     cell = get_cell(row, col)
 
@@ -624,6 +731,7 @@ def promoting(row, col):
 
 def PromotePawn(row, col, piece):
     global board, ispromoting, promotion_rects,state,turn
+    global pending_notation, pending_notation_turn
 
     cell = get_cell(row, col)
     debug(f"PromotePawn called. Turn before: {turn}")
@@ -645,6 +753,9 @@ def PromotePawn(row, col, piece):
     debug(f"Turn after switch: {turn}")
 
     state = WinCheck(turn)
+    RecordNotation(pending_notation, pending_notation_turn, piece)
+    pending_notation = None
+    pending_notation_turn = None
 
 
     
@@ -705,11 +816,17 @@ while True:
                                 if marker.collidepoint(event.pos):
                                     debug(f"you clicked marker {idx}")
                                     hit = True
+                                    notation = MoveNotation(
+                                        SelectedPiece, (row, col)
+                                    )
+                                    move_side = turn
                                     MakeMove(SelectedPiece,col,row,LegalMoves)
 
                                     ispromoting = PromotionCheck(row,col)
 
                                     if ispromoting:
+                                        pending_notation = notation
+                                        pending_notation_turn = move_side
                                         promotion_row = row
                                         promotion_col = col
                                         promotion_rects = promoting(promotion_row, promotion_col)
@@ -720,6 +837,7 @@ while True:
                                         else:
                                             turn = "W"
                                         state = WinCheck(turn)
+                                        RecordNotation(notation, move_side)
 
                                     LegalMoves = []
                                     break
@@ -740,6 +858,7 @@ while True:
     #render
     screen.blit(img, (0,0))
     screen.blit(board_surface, (90,100))
+    MoveHistory()
     generateBoard(x,y,board_coordinates) 
     piece_rect_list = place_pieces(board_coordinates,board)
 
