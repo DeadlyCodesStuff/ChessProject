@@ -430,7 +430,8 @@ def BishopLegalMoves(MoveMarkers, row, col, bishop_offsets):
             elif cell is not None and "king" not in cell:
                 is_black_target = "1" in cell
                 if (Color == "B" and not is_black_target) or (Color == "W" and is_black_target):
-                    MoveMarkers.append((r, c ))
+                    if not LeavesKingInCheck(turn,(row,col),(r,c)):
+                        MoveMarkers.append((r, c ))
                 break
             else:
                 break
@@ -474,7 +475,8 @@ def Rooklegalmoves(Movemarkers,row,col,rook_offsets):
             elif cell is not None and "king" not in cell:
                 is_black_target = "1" in cell
                 if (Color == "B" and not is_black_target) or (Color == "W" and is_black_target):
-                    Movemarkers.append((r, c ))
+                    if not LeavesKingInCheck(turn,(row,col),(r,c)):
+                        MoveMarkers.append((r, c ))
                 break
             else:
                 break
