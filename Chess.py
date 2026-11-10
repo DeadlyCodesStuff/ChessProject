@@ -476,7 +476,7 @@ def Rooklegalmoves(Movemarkers,row,col,rook_offsets):
                 is_black_target = "1" in cell
                 if (Color == "B" and not is_black_target) or (Color == "W" and is_black_target):
                     if not LeavesKingInCheck(turn,(row,col),(r,c)):
-                        MoveMarkers.append((r, c ))
+                        Movemarkers.append((r, c ))
                 break
             else:
                 break
