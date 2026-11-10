@@ -583,7 +583,7 @@ def checkdetection(king_row, king_col, origin=None):
                         return True
                     if (dr != 0 and dc != 0) and ("bishop" in cell or "queen" in cell):
                         return True
-                    if abs(dr) <= 1 and abs(dc) <= 1 and "king" in cell:
+                    if max(abs(r - king_row), abs(c - king_col)) == 1 and "king" in cell:
                         return True
                 break
             r += dr
